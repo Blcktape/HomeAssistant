@@ -21,31 +21,11 @@ blueprint:
     - UniFi G4 Doorbell Fingerprint Event entity.  
     - Alarmo alarm_control_panel entity.  
     - Notify service for alerts.  
+    Full documentation: see the README on GitHub (link below).
 
-    **Example authorized_users JSON (in secrets.yaml):**  
-    ```yaml
-    alarmo_authorized_users_json: >-
-      {
-        "abc123xx-xxxx-xxxx-xxxx-xxxxxxxxxxxx": {
-          "name": "John Doe",
-          "code": "1234"
-        },
-        "abc456xx-xxxx-xxxx-xxxx-xxxxxxxxxxxx": {
-          "name": "Jane Doe",
-          "code": "5678"
-        }
-      }
-    ```
-    **Example template sensor in configuration.yaml:**  
-    ```yaml
-    template:
-      - sensor:
-          - name: alarmo_authorized_users
-            state: "loaded"
-            attributes:
-              users: !secret alarmo_authorized_users_json
-    ```
-
+  domain: automation
+  source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/alarmo_unifi_protect_g4_fingerprint_disarm_blueprint.md
+  
   domain: automation
 
   input:

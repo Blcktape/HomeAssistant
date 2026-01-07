@@ -1,22 +1,63 @@
+
 blueprint:
-  name: Security - Alarmo - Fingerprint Scan Disarm (with selectable inputs)
+  name: Security - Alarmo - Unifi Fingerprint Scan Disarm
   description: >
-    Disarm Alarmo using UniFi Protect G4 Doorbell fingerprints, with per-user authorization
-    and per-user disarm codes. Select your authorized users sensor, the G4 fingerprint event
-    entity, and your Alarmo panel. The authorized users sensor must expose a 'users'
-    attribute (JSON mapping ULP IDs to objects { "ULP123": { "name": "Alice", "code": "1234" }, ... }).
+    **Version:** 2026-01-07
+    **Purpose:**  
+    This blueprint disarms your Alarmo alarm panel when a UniFi Protect G4 Doorbell fingerprint scan is detected and matches an authorized user.  
+    It uses a sensor that contains a JSON map of authorized users keyed by ULP ID, allowing per-user codes and names.  
+    If the fingerprint is authorized, the alarm is disarmed using the user’s code, and a notification plus logbook entry is created.  
+    If unauthorized, a warning notification and logbook entry are generated.  
+
+    **Features:**  
+    - Defensive filters to ensure valid fingerprint events.  
+    - Per-user authorization via a sensor attribute (`users`).  
+    - Per-user disarm codes for Alarmo.  
+    - Notifications for success and failure.  
+    - Logbook audit trail.  
+
+    **Inputs:**  
+    - Authorized Users Sensor (must have `users` attribute with JSON).  
+    - UniFi G4 Doorbell Fingerprint Event entity.  
+    - Alarmo alarm_control_panel entity.  
+    - Notify service for alerts.  
+
+    **Example authorized_users JSON (in secrets.yaml):**  
+    ```yaml
+    alarmo_authorized_users_json: >-
+      {
+        "abc123xx-xxxx-xxxx-xxxx-xxxxxxxxxxxx": {
+          "name": "John Doe",
+          "code": "1234"
+        },
+        "abc456xx-xxxx-xxxx-xxxx-xxxxxxxxxxxx": {
+          "name": "Jane Doe",
+          "code": "5678"
+        }
+      }
+    ```
+    **Example template sensor in configuration.yaml:**  
+    ```yaml
+    template:
+      - sensor:
+          - name: alarmo_authorized_users
+            state: "loaded"
+            attributes:
+              users: !secret alarmo_authorized_users_json
+    ```
+
   domain: automation
 
   input:
     authorized_users_sensor:
       name: Authorized users sensor
-      description: Sensor that has a 'users' attribute containing JSON of authorized users keyed by ULP ID.
+      description: Sensor with 'users' attribute containing JSON of authorized users keyed by ULP ID.
       selector:
         entity:
           domain: sensor
 
     fingerprint_event_entity:
-      name: UniFi G4 doorbell fingerprint event
+      name: UniFi G4 Doorbell fingerprint event
       description: Select the event entity that emits fingerprint events (usually event.camera_doorbell_fingerprint).
       selector:
         entity:
@@ -33,12 +74,10 @@ blueprint:
 
     notify_service:
       name: Notify service
-      description: Notification service to use (e.g., notify.mobile_app_your_phone or a group notifier).
+      description: Notification service to use (e.g., notify.mobile_app_your_phone).
       default: notify.notify_phone
       selector:
         text:
-
-# -------------------- Automation generated from the blueprint inputs --------------------
 
 trigger:
   - alias: Fingerprint Scan Event
@@ -122,7 +161,6 @@ variables:
   scanned_ulp_id: "{{ trigger.event.data.new_state.attributes.ulp_id }}"
   scanned_name: "{{ trigger.event.data.new_state.attributes.full_name }}"
 
-  # Pull 'users' attribute from selected sensor and normalize to a mapping.
   authorized_users_sensor_entity: !input authorized_users_sensor
   authorized_users: >-
     {% set users_attr = state_attr(authorized_users_sensor_entity, 'users') %}

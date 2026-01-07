@@ -2,28 +2,37 @@
 blueprint:
   name: Security - Alarmo - Unifi Fingerprint Scan Disarm
   description: >
+    # Alarmo - Unifi Fingerprint Scan Disarm
+  
     **Version:** 2026-01-07
-    **Purpose:**  
-    This blueprint disarms your Alarmo alarm panel when a UniFi Protect G4 Doorbell fingerprint scan is detected and matches an authorized user.  
-    It uses a sensor that contains a JSON map of authorized users keyed by ULP ID, allowing per-user codes and names.  
-    If the fingerprint is authorized, the alarm is disarmed using the user’s code, and a notification plus logbook entry is created.  
-    If unauthorized, a warning notification and logbook entry are generated.  
 
-    **Features:**  
-    - Defensive filters to ensure valid fingerprint events.  
-    - Per-user authorization via a sensor attribute (`users`).  
-    - Per-user disarm codes for Alarmo.  
-    - Notifications for success and failure.  
-    - Logbook audit trail.  
+    
+    **Purpose:**
+    This blueprint disarms your Alarmo alarm panel when a UniFi Protect G4 Doorbell fingerprint scan is detected and matches an authorized user.
+    It uses a sensor that contains a JSON map of authorized users keyed by ULP ID, allowing per-user codes and names.
+    If the fingerprint is authorized, the alarm is disarmed using the user’s code, and a notification plus logbook entry is created.
+    If unauthorized, a warning notification and logbook entry are generated.
+
+
+    **Features:**
+    - Defensive filters to ensure valid fingerprint events.
+    - Per-user authorization via a sensor attribute (`users`).
+    - Per-user disarm codes for Alarmo.
+    - Notifications for success and failure.
+    - Logbook audit trail.
+
 
     **Inputs:**  
-    - Authorized Users Sensor (must have `users` attribute with JSON).  
-    - UniFi G4 Doorbell Fingerprint Event entity.  
-    - Alarmo alarm_control_panel entity.  
-    - Notify service for alerts.  
+    - Authorized Users Sensor (must have `users` attribute with JSON).
+    - UniFi G4 Doorbell Fingerprint Event entity.
+    - Alarmo alarm_control_panel entity.
+    - Notify service for alerts.
     Full documentation: see the README on GitHub (link below).
+    
 
-  domain: automation
+    **Readme:**
+    https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/alarmo_unifi_protect_g4_fingerprint_disarm_blueprint.md
+    
   source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/alarmo_unifi_protect_g4_fingerprint_disarm_blueprint.md
   
   domain: automation

@@ -7,16 +7,16 @@ blueprint:
     notifications and a custom actions block for TTS/announcements.
   domain: automation
   source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/bosch_home_connect_dryer_reminders_and_service/bosch_home_connect_dryer_reminders_and_service.yaml
-  author: Blcktape
+  author: Blcktape (adjusted by Jan/Copilot)
 
 input:
-  # ----------- Dryer finish detection -----------
+  # ---------- Finish detection ----------
   dryer_job_state:
     name: Dryer job state (sensor)
     description: >
       Sensor that reflects the job state. This blueprint considers the cycle finished when
-      this sensor changes to a value that contains one of the finish keywords (below).
-      Leave empty if you prefer the dedicated "Finished" binary_sensor trigger.
+      this sensor changes to a value containing any of the finish keywords.
+      Leave empty if you only use the finished binary sensor.
     default: []
     selector:
       entity:
@@ -37,7 +37,7 @@ input:
   finish_keywords:
     name: Finish keywords
     description: >
-      Comma-separated list of keywords to detect a finished state when using the job state sensor.
+      Comma-separated keywords to detect a finished state from the job state sensor.
       Example: finish, finished, completed, done
     default: "finish, finished, completed, done"
     selector:
@@ -56,11 +56,11 @@ input:
         unit_of_measurement: sec
         mode: slider
 
-  # ----------- Notifications -----------
+  # ---------- Notifications ----------
   notify_devices:
     name: Devices to notify
     description: >
-      Pick one or more phones/tablets (Home Assistant Companion App) to receive end and maintenance notifications.
+      Pick one or more phones/tablets (Home Assistant Companion App) to receive notifications.
     selector:
       device:
         filter:
@@ -79,7 +79,7 @@ input:
     selector:
       text:
 
-  # ----------- Service / maintenance tracking -----------
+  # ---------- Service / maintenance tracking ----------
   service_counter:
     name: Service counter (counter)
     description: Counter helper that tracks the number of dryer cycles.
@@ -90,8 +90,7 @@ input:
 
   maintenance_threshold_cycles:
     name: Maintenance threshold (cycles)
-    description: >
-      Notify when the service counter reaches this number of cycles.
+    description: Notify when the service counter reaches this number of cycles.
     default: 5
     selector:
       number:
@@ -113,11 +112,11 @@ input:
       {{ maintenance_threshold_cycles }} for the threshold.
     default: >
       Time for maintenance: the dryer has run {{ states(service_counter) | int(0) }} cycles
-      (threshold {{ maintenance_threshold_cycles }}). Check the lint filter/heat exchanger as required.
+      (threshold {{ maintenance_threshold_cycles }}). Check lint filter/heat exchanger.
     selector:
       text:
 
-  # ----------- Custom actions -----------
+  # ---------- Custom actions ----------
   custom_actions:
     name: Custom actions (Optional)
     description: >
@@ -126,27 +125,26 @@ input:
     selector:
       action: {}
 
-# ----------------- TRIGGERS -----------------
-triggers:
-  - trigger: state
+# ---------- Triggers ----------
+trigger:
+  - platform: state
     entity_id: !input dryer_job_state
     id: finished_text
 
-  - trigger: state
+  - platform: state
     entity_id: !input dryer_finished_binary
     to: "on"
     for:
       seconds: !input finish_stabilize_seconds
     id: finished_flag
 
-# ----------------- VARIABLES -----------------
+# ---------- Variables ----------
 variables:
-  # Inputs needed inside templates
   job_state_ent: !input dryer_job_state
   finished_bin_ent: !input dryer_finished_binary
   finish_keywords_text: !input finish_keywords
-  stabilize_sec: !input finish_stabilize_seconds
 
+  stabilize_sec: !input finish_stabilize_seconds
   notify_device_list: !input notify_devices
 
   counter_ent: !input service_counter
@@ -157,7 +155,6 @@ variables:
   title_maint: !input maintenance_title
   msg_maint: !input maintenance_message
 
-  # Parsed helpers for text-state detection
   job_state_now: >-
     {% if job_state_ent %}
       {{ states(job_state_ent) | default('', true) | lower }}
@@ -179,83 +176,24 @@ variables:
       {{ (kw_list | select('in', s) | list | count) > 0 }}
     {% endif %}
 
-# ----------------- ACTIONS -----------------
-actions:
+# ---------- Conditions ----------
+condition: []
+
+# ---------- Actions ----------
+action:
   - choose:
-      # Case 1: Trigger came from the binary finished flag
+      # A) Finished via binary_sensor
       - conditions:
           - condition: trigger
             id: finished_flag
         sequence:
-          - action: script.turn_on
+          - action: counter.increment
             target:
-              entity_id: script._bosch_dryer_internal_finish_flow
+              entity_id: !input service_counter
 
-      # Case 2: Trigger came from job state sensor; verify it matches finish keywords
-      - conditions:
-          - condition: trigger
-            id: finished_text
-          - condition: template
-            value_template: "{{ is_finished_by_text }}"
-        sequence:
-          # Stabilize, then re-check state still matches
-          - delay:
-              seconds: !input finish_stabilize_seconds
-          - condition: template
-            value_template: >-
-              {% set cur = states(job_state_ent) | default('', true) | lower %}
-              {{ kw_list | select('in', cur) | list | count > 0 }}
-          - action: script.turn_on
-            target:
-              entity_id: script._bosch_dryer_internal_finish_flow
-    default: []
-
-mode: single
-max_exceeded: silent
-
-# ----------------- INTERNAL SCRIPT: MAIN FINISH FLOW -----------------
-# Note: Scripts can be inlined as blueprinted sequences via "sequence" key.
-# We use an inlined script to keep the finish flow reusable from both trigger paths.
-script:
-  _bosch_dryer_internal_finish_flow:
-    alias: Bosch Dryer Internal Finish Flow
-    sequence:
-      # 1) Increment the service counter
-      - action: counter.increment
-        target:
-          entity_id: "{{ counter_ent }}"
-
-      # 2) Notify selected devices (loop per device)
-      - variables:
-          _list: "{{ notify_device_list }}"
-      - if:
-          - condition: template
-            value_template: "{{ _list is iterable and (_list | count) > 0 }}"
-        then:
-          - repeat:
-              for_each: "{{ _list }}"
-              sequence:
-                # Build the per-device notify service (mobile_app_<slug>)
-                # Uses the device's name; ensure your Companion App device name matches the notify target.
-                - variables:
-                    _dev_name: >-
-                      {{ device_attr(repeat.item, 'name')
-                         | default('', true)
-                         | lower
-                         | replace(' ', '_')
-                         | replace('-', '_') }}
-                - action: >-
-                    {{ 'notify.mobile_app_' ~ _dev_name }}
-                  data:
-                    title: "{{ title_end }}"
-                    message: "{{ msg_end }}"
-
-      # 3) Maintenance check: if counter >= threshold, send maintenance notification
-      - if:
-          - condition: template
-            value_template: >-
-              {{ states(counter_ent) | int(0) >= (maint_threshold | int) }}
-        then:
+          # Notify selected devices (loop)
+          - variables:
+              _list: !input notify_devices
           - if:
               - condition: template
                 value_template: "{{ _list is iterable and (_list | count) > 0 }}"
@@ -267,15 +205,112 @@ script:
                         _dev_name: >-
                           {{ device_attr(repeat.item, 'name')
                              | default('', true)
-                             | lower
-                             | replace(' ', '_')
-                             | replace('-', '_') }}
+                             | lower | replace(' ', '_') | replace('-', '_') }}
                     - action: >-
                         {{ 'notify.mobile_app_' ~ _dev_name }}
                       data:
-                        title: "{{ title_maint }}"
-                        message: "{{ msg_maint }}"
+                        title: !input end_title
+                        message: !input end_message
 
-      # 4) Custom actions (if any)
-      - choose: []
-        default: !input custom_actions
+          # Maintenance check
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ states(counter_ent) | int(0) >= (maint_threshold | int) }}
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ _list is iterable and (_list | count) > 0 }}"
+                then:
+                  - repeat:
+                      for_each: "{{ _list }}"
+                      sequence:
+                        - variables:
+                            _dev_name: >-
+                              {{ device_attr(repeat.item, 'name')
+                                 | default('', true)
+                                 | lower | replace(' ', '_') | replace('-', '_') }}
+                        - action: >-
+                            {{ 'notify.mobile_app_' ~ _dev_name }}
+                          data:
+                            title: !input maintenance_title
+                            message: !input maintenance_message
+
+          # Custom actions
+          - choose: []
+            default: !input custom_actions
+
+      # B) Finished via text state (keywords)
+      - conditions:
+          - condition: trigger
+            id: finished_text
+          - condition: template
+            value_template: "{{ is_finished_by_text }}"
+        sequence:
+          # Stabilize window
+          - delay:
+              seconds: !input finish_stabilize_seconds
+
+          # Re-check still finished by keywords
+          - condition: template
+            value_template: >-
+              {% set cur = states(job_state_ent) | default('', true) | lower %}
+              {{ kw_list | select('in', cur) | list | count > 0 }}
+
+          # Increment counter
+          - action: counter.increment
+            target:
+              entity_id: !input service_counter
+
+          # Notify selected devices
+          - variables:
+              _list: !input notify_devices
+          - if:
+              - condition: template
+                value_template: "{{ _list is iterable and (_list | count) > 0 }}"
+            then:
+              - repeat:
+                  for_each: "{{ _list }}"
+                  sequence:
+                    - variables:
+                        _dev_name: >-
+                          {{ device_attr(repeat.item, 'name')
+                             | default('', true)
+                             | lower | replace(' ', '_') | replace('-', '_') }}
+                    - action: >-
+                        {{ 'notify.mobile_app_' ~ _dev_name }}
+                      data:
+                        title: !input end_title
+                        message: !input end_message
+
+          # Maintenance check
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ states(counter_ent) | int(0) >= (maint_threshold | int) }}
+            then:
+              - if:
+                  - condition: template
+                    value_template: "{{ _list is iterable and (_list | count) > 0 }}"
+                then:
+                  - repeat:
+                      for_each: "{{ _list }}"
+                      sequence:
+                        - variables:
+                            _dev_name: >-
+                              {{ device_attr(repeat.item, 'name')
+                                 | default('', true)
+                                 | lower | replace(' ', '_') | replace('-', '_') }}
+                        - action: >-
+                            {{ 'notify.mobile_app_' ~ _dev_name }}
+                          data:
+                            title: !input maintenance_title
+                            message: !input maintenance_message
+
+          # Custom actions
+          - choose: []
+            default: !input custom_actions
+    default: []
+
+mode: single
+max_exceeded: silent

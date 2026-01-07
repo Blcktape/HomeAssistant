@@ -1,52 +1,48 @@
 
 blueprint:
-  name: Bosch Home Connect Dryer – Reminders & Service (devices + counter + custom actions)
+  name: Bosch Home Connect Dryer – Reminders & Service (friendly name + operation/door sensors)
   description: >
-    Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter
-    helper, and warns for maintenance based on a cycle threshold. Includes device selector for
-    notifications and a custom actions block for TTS/announcements.
+    Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter,
+    reminds to empty the dryer when the door opens, and warns for maintenance based on a cycle threshold.
+    Uses the Operation State sensor for finish detection, a Door State sensor for the empty reminder,
+    includes a device selector for notifications and a custom actions block for TTS/announcements.
   domain: automation
   source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/bosch_home_connect_dryer_reminders_and_service/bosch_home_connect_dryer_reminders_and_service.yaml
   author: Blcktape
 
   input:
-    # ---------- Finish detection ----------
-    dryer_job_state:
-      name: Dryer job state (sensor)
+    # ---------- Dryer identification ----------
+    dryer_friendly_name:
+      name: Dryer friendly name (for messages)
+      description: Plain text name used in notifications.
+      default: "Dryer"
+      selector:
+        text:
+
+    # ---------- Finish detection via Operation State ----------
+    operation_state_sensor:
+      name: Operation state sensor
       description: >
-        Sensor that reflects the job state. This blueprint considers the cycle finished when
-        this sensor changes to a value containing any of the finish keywords.
-        Leave empty if you only use the finished binary sensor.
-      default: []
+        Select your dryer operation state sensor (e.g., values like 'finished', 'run', 'ready').
+        Provided by Home Connect / HC Alt / HC Local integrations.
       selector:
         entity:
           filter:
             - domain: sensor
 
-    dryer_finished_binary:
-      name: Dryer finished (binary_sensor)
-      description: >
-        Optional. Binary sensor that turns ON when the dryer has finished. If provided,
-        it will be used as an additional trigger.
-      default: []
-      selector:
-        entity:
-          filter:
-            - domain: binary_sensor
-
     finish_keywords:
       name: Finish keywords
       description: >
-        Comma-separated keywords to detect a finished state from the job state sensor.
-        Example: finish, finished, completed, done
-      default: "finish, finished, completed, done"
+        Comma-separated keywords to detect a finished state from the operation state sensor.
+        Example: finished, done, complete
+      default: "finished, done, complete"
       selector:
         text:
 
     finish_stabilize_seconds:
       name: Finish stabilization (seconds)
       description: >
-        How long the finished state must hold before actions run.
+        How long the finished state must hold before end actions run.
       default: 30
       selector:
         number:
@@ -56,11 +52,38 @@ blueprint:
           unit_of_measurement: sec
           mode: slider
 
+    # ---------- Door reminder to empty the dryer ----------
+    door_state_sensor:
+      name: Door state sensor
+      description: Select your dryer door state sensor (states like 'open' / 'closed').
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+
+    door_open_states:
+      name: Door “open” state words
+      description: Comma-separated list of states regarded as “open”.
+      default: "open, opened"
+      selector:
+        text:
+
+    empty_dryer_title:
+      name: Empty reminder title
+      default: "Empty {{ dryer_friendly_name }}"
+      selector:
+        text:
+
+    empty_dryer_message:
+      name: Empty reminder message
+      default: "{{ dryer_friendly_name }} door opened. Please empty the lint filter and remove laundry."
+      selector:
+        text:
+
     # ---------- Notifications ----------
     notify_devices:
       name: Devices to notify
-      description: >
-        Pick one or more phones/tablets (Home Assistant Companion App) to receive notifications.
+      description: Phones/tablets (Home Assistant Companion App) to receive notifications.
       selector:
         device:
           filter:
@@ -69,20 +92,20 @@ blueprint:
 
     end_title:
       name: End notification title
-      default: "Dryer"
+      default: "{{ dryer_friendly_name }}"
       selector:
         text:
 
     end_message:
       name: End notification message
-      default: "The dryer cycle has finished."
+      default: "{{ dryer_friendly_name }} cycle has finished."
       selector:
         text:
 
     # ---------- Service / maintenance tracking ----------
     service_counter:
       name: Service counter (counter)
-      description: Counter helper that tracks the number of dryer cycles.
+      description: Counter helper that tracks number of dryer cycles.
       selector:
         entity:
           filter:
@@ -90,7 +113,7 @@ blueprint:
 
     maintenance_threshold_cycles:
       name: Maintenance threshold (cycles)
-      description: Notify when the service counter reaches this number of cycles.
+      description: Notify when the counter reaches this number of cycles.
       default: 5
       selector:
         number:
@@ -101,7 +124,7 @@ blueprint:
 
     maintenance_title:
       name: Maintenance notification title
-      default: "Dryer maintenance"
+      default: "Maintenance {{ dryer_friendly_name }}"
       selector:
         text:
 
@@ -111,40 +134,40 @@ blueprint:
         You can reference {{ states(service_counter) }} for the current counter and
         {{ maintenance_threshold_cycles }} for the threshold.
       default: >
-        Time for maintenance: the dryer has run {{ states(service_counter) | int(0) }} cycles
-        (threshold {{ maintenance_threshold_cycles }}). Check lint filter/heat exchanger.
+        {{ dryer_friendly_name }} has run {{ states(service_counter) | int(0) }} cycles
+        (threshold {{ maintenance_threshold_cycles }}). Time for routine maintenance.
       selector:
         text:
 
     # ---------- Custom actions ----------
     custom_actions:
       name: Custom actions (Optional)
-      description: >
-        Extra actions to run after notifications (e.g., TTS or announcements).
+      description: Extra actions to run after end/maintenance notifications (e.g., TTS/announcements).
       default: []
       selector:
         action: {}
 
 # ---------- Triggers ----------
+# A) Finish detection via operation state changes
 trigger:
   - platform: state
-    entity_id: !input dryer_job_state
-    id: finished_text
+    entity_id: !input operation_state_sensor
+    id: op_state_changed
 
+  # B) Door opened -> reminder (runs only after a finished cycle)
   - platform: state
-    entity_id: !input dryer_finished_binary
-    to: "on"
-    for:
-      seconds: !input finish_stabilize_seconds
-    id: finished_flag
+    entity_id: !input door_state_sensor
+    id: door_state_changed
 
 # ---------- Variables ----------
 variables:
-  job_state_ent: !input dryer_job_state
-  finished_bin_ent: !input dryer_finished_binary
-  finish_keywords_text: !input finish_keywords
+  # Inputs
+  op_state_ent: !input operation_state_sensor
+  door_state_ent: !input door_state_sensor
 
-  stabilize_sec: !input finish_stabilize_seconds
+  finish_keywords_text: !input finish_keywords
+  door_open_words_text: !input door_open_states
+
   notify_device_list: !input notify_devices
 
   counter_ent: !input service_counter
@@ -155,11 +178,12 @@ variables:
   title_maint: !input maintenance_title
   msg_maint: !input maintenance_message
 
-  job_state_now: >-
-    {% if job_state_ent %}
-      {{ states(job_state_ent) | default('', true) | lower }}
-    {% else %}{{ '' }}{% endif %}
+  title_empty: !input empty_dryer_title
+  msg_empty: !input empty_dryer_message
 
+  dryer_friendly_name: !input dryer_friendly_name
+
+  # Parsed lists
   kw_list: >-
     {{ (finish_keywords_text | default('', true) | lower)
        | replace(';', ',')
@@ -168,12 +192,39 @@ variables:
        | select('ne','')
        | list }}
 
-  is_finished_by_text: >-
-    {% set s = job_state_now %}
+  door_open_list: >-
+    {{ (door_open_words_text | default('', true) | lower)
+       | replace(';', ',')
+       | split(',')
+       | map('trim')
+       | select('ne','')
+       | list }}
+
+  # Current states
+  op_state_now: >-
+    {% if op_state_ent %}
+      {{ states(op_state_ent) | default('', true) | lower }}
+    {% else %}{{ '' }}{% endif %}
+
+  door_state_now: >-
+    {% if door_state_ent %}
+      {{ states(door_state_ent) | default('', true) | lower }}
+    {% else %}{{ '' }}{% endif %}
+
+  is_finished_by_op_state: >-
+    {% set s = op_state_now %}
     {% if s == '' or kw_list | length == 0 %}
       false
     {% else %}
       {{ (kw_list | select('in', s) | list | count) > 0 }}
+    {% endif %}
+
+  is_door_open: >-
+    {% set d = door_state_now %}
+    {% if d == '' or door_open_list | length == 0 %}
+      false
+    {% else %}
+      {{ (door_open_list | select('eq', d) | list | count) > 0 }}
     {% endif %}
 
 # ---------- Conditions ----------
@@ -182,87 +233,29 @@ condition: []
 # ---------- Actions ----------
 action:
   - choose:
-      # A) Finished via binary_sensor
+      # A) Operation state indicates finished
       - conditions:
           - condition: trigger
-            id: finished_flag
-        sequence:
-          - action: counter.increment
-            target:
-              entity_id: !input service_counter
-
-          # Notify selected devices (loop)
-          - variables:
-              _list: !input notify_devices
-          - if:
-              - condition: template
-                value_template: "{{ _list is iterable and (_list | count) > 0 }}"
-            then:
-              - repeat:
-                  for_each: "{{ _list }}"
-                  sequence:
-                    - variables:
-                        _dev_name: >-
-                          {{ device_attr(repeat.item, 'name')
-                             | default('', true)
-                             | lower | replace(' ', '_') | replace('-', '_') }}
-                    - action: >-
-                        {{ 'notify.mobile_app_' ~ _dev_name }}
-                      data:
-                        title: !input end_title
-                        message: !input end_message
-
-          # Maintenance check
-          - if:
-              - condition: template
-                value_template: >-
-                  {{ states(counter_ent) | int(0) >= (maint_threshold | int) }}
-            then:
-              - if:
-                  - condition: template
-                    value_template: "{{ _list is iterable and (_list | count) > 0 }}"
-                then:
-                  - repeat:
-                      for_each: "{{ _list }}"
-                      sequence:
-                        - variables:
-                            _dev_name: >-
-                              {{ device_attr(repeat.item, 'name')
-                                 | default('', true)
-                                 | lower | replace(' ', '_') | replace('-', '_') }}
-                        - action: >-
-                            {{ 'notify.mobile_app_' ~ _dev_name }}
-                          data:
-                            title: !input maintenance_title
-                            message: !input maintenance_message
-
-          # Custom actions
-          - choose: []
-            default: !input custom_actions
-
-      # B) Finished via text state (keywords)
-      - conditions:
-          - condition: trigger
-            id: finished_text
+            id: op_state_changed
           - condition: template
-            value_template: "{{ is_finished_by_text }}"
+            value_template: "{{ is_finished_by_op_state }}"
         sequence:
           # Stabilize window
           - delay:
               seconds: !input finish_stabilize_seconds
 
-          # Re-check still finished by keywords
+          # Re-check still finished
           - condition: template
             value_template: >-
-              {% set cur = states(job_state_ent) | default('', true) | lower %}
+              {% set cur = states(op_state_ent) | default('', true) | lower %}
               {{ kw_list | select('in', cur) | list | count > 0 }}
 
-          # Increment counter
+          # Increment cycle counter
           - action: counter.increment
             target:
               entity_id: !input service_counter
 
-          # Notify selected devices
+          # Notify devices (end message)
           - variables:
               _list: !input notify_devices
           - if:
@@ -274,14 +267,13 @@ action:
                   sequence:
                     - variables:
                         _dev_name: >-
-                          {{ device_attr(repeat.item, 'name')
-                             | default('', true)
+                          {{ device_attr(repeat.item, 'name') | default('', true)
                              | lower | replace(' ', '_') | replace('-', '_') }}
                     - action: >-
                         {{ 'notify.mobile_app_' ~ _dev_name }}
                       data:
-                        title: !input end_title
-                        message: !input end_message
+                        title: "{{ title_end }}"
+                        message: "{{ msg_end }}"
 
           # Maintenance check
           - if:
@@ -298,18 +290,51 @@ action:
                       sequence:
                         - variables:
                             _dev_name: >-
-                              {{ device_attr(repeat.item, 'name')
-                                 | default('', true)
+                              {{ device_attr(repeat.item, 'name') | default('', true)
                                  | lower | replace(' ', '_') | replace('-', '_') }}
                         - action: >-
                             {{ 'notify.mobile_app_' ~ _dev_name }}
                           data:
-                            title: !input maintenance_title
-                            message: !input maintenance_message
+                            title: "{{ title_maint }}"
+                            message: "{{ msg_maint }}"
 
           # Custom actions
           - choose: []
             default: !input custom_actions
+
+      # B) Door opened -> empty reminder (only valid after finish)
+      - conditions:
+          - condition: trigger
+            id: door_state_changed
+          - condition: template
+            value_template: "{{ is_door_open }}"
+        sequence:
+          # We only remind if the last known op_state indicates finished (or the counter changed recently).
+          # Simple condition: if op_state contains a finish keyword OR counter is > 0 (has history).
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ is_finished_by_op_state
+                     or ( states(counter_ent) | int(0) > 0 ) }}
+            then:
+              - variables:
+                  _list: !input notify_devices
+              - if:
+                  - condition: template
+                    value_template: "{{ _list is iterable and (_list | count) > 0 }}"
+                then:
+                  - repeat:
+                      for_each: "{{ _list }}"
+                      sequence:
+                        - variables:
+                            _dev_name: >-
+                              {{ device_attr(repeat.item, 'name') | default('', true)
+                                 | lower | replace(' ', '_') | replace('-', '_') }}
+                        - action: >-
+                            {{ 'notify.mobile_app_' ~ _dev_name }}
+                          data:
+                            title: "{{ title_empty }}"
+                            message: "{{ msg_empty }}"
     default: []
 
 mode: single

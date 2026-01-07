@@ -75,6 +75,56 @@ template:
     - If authorized: Disarms Alarmo using the user’s code, sends a success notification, and logs the event.
     - If unauthorized: Sends a warning notification and logs the attempt.
 
+
+# How to Capture the ULP ID for Each Fingerprint
+
+When a fingerprint scan occurs on your UniFi Protect G4 Doorbell, the integration sends an **event** to Home Assistant. This event contains attributes such as:
+
+- `event_type`: `identified`
+- `ulp_id`: The unique fingerprint ID
+- `full_name`: The name associated with the fingerprint (if configured in UniFi Protect)
+
+## Steps to Capture ULP ID
+
+1. **Enable Developer Tools in Home Assistant**
+   - Go to **Developer Tools → Events**.
+
+2. **Listen for the Fingerprint Event**
+   - In the **Listen to events** field, enter:
+     ```
+     state_changed
+     ```
+   - Click **Start Listening**.
+
+3. **Trigger a Fingerprint Scan**
+   - Scan a fingerprint on your UniFi Protect G4 Doorbell.
+
+4. **Inspect the Event Data**
+   - Look for the entity ID of your doorbell fingerprint sensor (e.g., `event.camera_doorbell_fingerprint`).
+   - In the `new_state.attributes`, find:
+     ```
+     ulp_id: abc123xx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+     full_name: John Doe
+     event_type: identified
+     ```
+
+5. **Copy the ULP ID**
+   - Use this `ulp_id` in your authorized users JSON:
+     ```json
+     {
+       "abc123xx-xxxx-xxxx-xxxx-xxxxxxxxxxxx": {
+         "name": "John Doe",
+         "code": "1234"
+       }
+     }
+     ```
+
+## Tip
+- Repeat this process for each fingerprint you want to authorize.
+- Store all ULP IDs in your `secrets.yaml` or template sensor as shown in the blueprint guide.
+
+---
+
 ## Notes
 
 - Ensure the authorized users sensor is correctly configured and contains valid JSON.

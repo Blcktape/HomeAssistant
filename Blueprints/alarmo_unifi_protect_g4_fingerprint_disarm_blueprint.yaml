@@ -14,19 +14,19 @@ blueprint:
     If unauthorized, a warning notification and logbook entry are generated.
 
 
-    **Features:**
-    - Defensive filters to ensure valid fingerprint events.
-    - Per-user authorization via a sensor attribute (`users`).
-    - Per-user disarm codes for Alarmo.
-    - Notifications for success and failure.
-    - Logbook audit trail.
+    - **Features:**
+      - Defensive filters to ensure valid fingerprint events.
+      - Per-user authorization via a sensor attribute (`users`).
+      - Per-user disarm codes for Alarmo.
+      - Notifications for success and failure.
+      - Logbook audit trail.
 
 
-    **Inputs:**  
-    - Authorized Users Sensor (must have `users` attribute with JSON).
-    - UniFi G4 Doorbell Fingerprint Event entity.
-    - Alarmo alarm_control_panel entity.
-    - Notify service for alerts.
+    - **Inputs:**  
+      - Authorized Users Sensor (must have `users` attribute with JSON).
+      - UniFi G4 Doorbell Fingerprint Event entity.
+      - Alarmo alarm_control_panel entity.
+      - Notify service for alerts.
     Full documentation: see the README on GitHub (link below).
     
 

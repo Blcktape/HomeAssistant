@@ -1,294 +1,281 @@
 
 blueprint:
-  name: Bosch Home Connect Dryer — Finish notifications, repeated reminders & maintenance counter
+  name: Bosch Home Connect Dryer – Reminders & Service (devices + counter + custom actions)
   description: >
-    Sends a finish notification for your Bosch/Siemens Home Connect dryer, repeats reminders
-    until the door is opened or you Snooze/Stop them, and increments a persistent service counter.
-    When the counter reaches a threshold, you'll get a maintenance alert with a one-tap reset.
-    Requires Home Connect integration and an input_number helper for service cycles.
+    Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter
+    helper, and warns for maintenance based on a cycle threshold. Includes device selector for
+    notifications and a custom actions block for TTS/announcements.
   domain: automation
-  source_url: https://example.com/blueprints/bosch_home_connect_dryer_reminders_and_service
+  source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/bosch_home_connect_dryer_reminders_and_service/bosch_home_connect_dryer_reminders_and_service.yaml
+  author: Blcktape
 
-  input:
-    dryer_name:
-      name: Dryer friendly name (for messages)
-      description: Used in notifications (e.g., "Bosch dryer")
-      default: Bosch dryer
-      selector:
-        text:
+input:
+  # ----------- Dryer finish detection -----------
+  dryer_job_state:
+    name: Dryer job state (sensor)
+    description: >
+      Sensor that reflects the job state. This blueprint considers the cycle finished when
+      this sensor changes to a value that contains one of the finish keywords (below).
+      Leave empty if you prefer the dedicated "Finished" binary_sensor trigger.
+    default: []
+    selector:
+      entity:
+        filter:
+          - domain: sensor
 
-    operation_state_entity:
-      name: Operation state sensor
-      description: Select your Home Connect dryer operation state sensor (e.g., 'finished', 'run', etc.).
-      selector:
-        entity:
-          domain: sensor
+  dryer_finished_binary:
+    name: Dryer finished (binary_sensor)
+    description: >
+      Optional. Binary sensor that turns ON when the dryer has finished. If provided,
+      it will be used as an additional trigger.
+    default: []
+    selector:
+      entity:
+        filter:
+          - domain: binary_sensor
 
-    door_state_entity:
-      name: Door state sensor
-      description: Select your dryer door state sensor (states like 'open' / 'closed').
-      selector:
-        entity:
-          domain: sensor
+  finish_keywords:
+    name: Finish keywords
+    description: >
+      Comma-separated list of keywords to detect a finished state when using the job state sensor.
+      Example: finish, finished, completed, done
+    default: "finish, finished, completed, done"
+    selector:
+      text:
 
-    notify_services:
-      name: Notify services (comma-separated)
-      description: >
-        Enter one or more notify service names separated by commas, e.g.:
-        notify.mobile_app_your_phone, notify.mobile_app_partner_phone
-      selector:
-        text:
+  finish_stabilize_seconds:
+    name: Finish stabilization (seconds)
+    description: >
+      How long the finished state must hold before actions run.
+    default: 30
+    selector:
+      number:
+        min: 0
+        max: 300
+        step: 5
+        unit_of_measurement: sec
+        mode: slider
 
-    finish_hysteresis:
-      name: Finish hysteresis (minutes)
-      description: Dryer must remain in 'finished' state for this long before notifications start.
-      default: 2
-      selector:
-        number:
-          min: 0
-          max: 30
-          step: 1
-          unit_of_measurement: min
-          mode: slider
+  # ----------- Notifications -----------
+  notify_devices:
+    name: Devices to notify
+    description: >
+      Pick one or more phones/tablets (Home Assistant Companion App) to receive end and maintenance notifications.
+    selector:
+      device:
+        filter:
+          - integration: mobile_app
+        multiple: true
 
-    reminder_interval:
-      name: Reminder interval (minutes)
-      description: How often to repeat reminders while the door remains closed.
-      default: 10
-      selector:
-        number:
-          min: 1
-          max: 120
-          step: 1
-          unit_of_measurement: min
-          mode: slider
+  end_title:
+    name: End notification title
+    default: "Dryer"
+    selector:
+      text:
 
-    snooze_duration:
-      name: Snooze duration (minutes)
-      description: How long to snooze reminders when you tap "Snooze".
-      default: 30
-      selector:
-        number:
-          min: 5
-          max: 240
-          step: 5
-          unit_of_measurement: min
-          mode: slider
+  end_message:
+    name: End notification message
+    default: "The dryer cycle has finished."
+    selector:
+      text:
 
-    service_counter_entity:
-      name: Service counter (counter)
-      description: Select the input_number helper that stores dryer service cycles.
-      selector:
-        entity:
-          domain: counter
+  # ----------- Service / maintenance tracking -----------
+  service_counter:
+    name: Service counter (counter)
+    description: Counter helper that tracks the number of dryer cycles.
+    selector:
+      entity:
+        filter:
+          - domain: counter
 
-    service_threshold:
-      name: Maintenance threshold (cycles)
-      description: Number of finished cycles before a maintenance alert.
-      default: 50
-      selector:
-        number:
-          min: 5
-          max: 50
-          step: 1
-          mode: slider
+  maintenance_threshold_cycles:
+    name: Maintenance threshold (cycles)
+    description: >
+      Notify when the service counter reaches this number of cycles.
+    default: 5
+    selector:
+      number:
+        min: 1
+        max: 50
+        step: 1
+        mode: slider
 
-    maintenance_date_entity:
-      name: Last maintenance date (input_datetime, optional)
-      description: Optional helper to record the date when you reset maintenance.
-      default:
-      selector:
-        entity:
-          domain: input_datetime
-          multiple: false
-          # Can be left empty; if empty, the blueprint will skip setting a date.
+  maintenance_title:
+    name: Maintenance notification title
+    default: "Dryer maintenance"
+    selector:
+      text:
 
-# ------------------------ The automation ------------------------
-# Implementation notes:
-# - Triggers on operation_state 'finished' for !input finish_hysteresis minutes.
-# - Sends an initial notification with action buttons (SNOOZE / STOP).
-# - Loops reminders every !input reminder_interval minutes until door opens or you stop/snooze.
-# - Increments the service_counter (input_number) on each finish and checks against threshold.
-# - Maintenance alert includes 'RESET_DRYER_COUNTER' action to reset cycles and (optionally) set last maintenance date.
+  maintenance_message:
+    name: Maintenance notification message
+    description: >
+      You can reference {{ states(service_counter) }} for the current counter and
+      {{ maintenance_threshold_cycles }} for the threshold.
+    default: >
+      Time for maintenance: the dryer has run {{ states(service_counter) | int(0) }} cycles
+      (threshold {{ maintenance_threshold_cycles }}). Check the lint filter/heat exchanger as required.
+    selector:
+      text:
 
-trigger:
-  - platform: state
-    entity_id: !input operation_state_entity
-    to: finished
+  # ----------- Custom actions -----------
+  custom_actions:
+    name: Custom actions (Optional)
+    description: >
+      Extra actions to run after notifications (e.g., TTS or announcements).
+    default: []
+    selector:
+      action: {}
+
+# ----------------- TRIGGERS -----------------
+triggers:
+  - trigger: state
+    entity_id: !input dryer_job_state
+    id: finished_text
+
+  - trigger: state
+    entity_id: !input dryer_finished_binary
+    to: "on"
     for:
-      minutes: !input finish_hysteresis
+      seconds: !input finish_stabilize_seconds
+    id: finished_flag
 
-mode: parallel
+# ----------------- VARIABLES -----------------
+variables:
+  # Inputs needed inside templates
+  job_state_ent: !input dryer_job_state
+  finished_bin_ent: !input dryer_finished_binary
+  finish_keywords_text: !input finish_keywords
+  stabilize_sec: !input finish_stabilize_seconds
+
+  notify_device_list: !input notify_devices
+
+  counter_ent: !input service_counter
+  maint_threshold: !input maintenance_threshold_cycles
+
+  title_end: !input end_title
+  msg_end: !input end_message
+  title_maint: !input maintenance_title
+  msg_maint: !input maintenance_message
+
+  # Parsed helpers for text-state detection
+  job_state_now: >-
+    {% if job_state_ent %}
+      {{ states(job_state_ent) | default('', true) | lower }}
+    {% else %}{{ '' }}{% endif %}
+
+  kw_list: >-
+    {{ (finish_keywords_text | default('', true) | lower)
+       | replace(';', ',')
+       | split(',')
+       | map('trim')
+       | select('ne','')
+       | list }}
+
+  is_finished_by_text: >-
+    {% set s = job_state_now %}
+    {% if s == '' or kw_list | length == 0 %}
+      false
+    {% else %}
+      {{ (kw_list | select('in', s) | list | count) > 0 }}
+    {% endif %}
+
+# ----------------- ACTIONS -----------------
+actions:
+  - choose:
+      # Case 1: Trigger came from the binary finished flag
+      - conditions:
+          - condition: trigger
+            id: finished_flag
+        sequence:
+          - action: script.turn_on
+            target:
+              entity_id: script._bosch_dryer_internal_finish_flow
+
+      # Case 2: Trigger came from job state sensor; verify it matches finish keywords
+      - conditions:
+          - condition: trigger
+            id: finished_text
+          - condition: template
+            value_template: "{{ is_finished_by_text }}"
+        sequence:
+          # Stabilize, then re-check state still matches
+          - delay:
+              seconds: !input finish_stabilize_seconds
+          - condition: template
+            value_template: >-
+              {% set cur = states(job_state_ent) | default('', true) | lower %}
+              {{ kw_list | select('in', cur) | list | count > 0 }}
+          - action: script.turn_on
+            target:
+              entity_id: script._bosch_dryer_internal_finish_flow
+    default: []
+
+mode: single
 max_exceeded: silent
 
-variables:
-  dryer_name: !input dryer_name
-  door_state_entity: !input door_state_entity
-  # Build list of notify services from comma-separated text.
-  notify_services_list: >
-    {% set raw = iif((!input notify_services) is defined, !input notify_services, '') %}
-    {{ raw.split(',') | map('trim') | reject('equalto','') | list }}
-  service_counter_entity: !input service_counter_entity
-  service_threshold: !input service_threshold
-  reminder_interval_sec: "{{ ( !input reminder_interval | int(10) ) * 60 }}"
-  snooze_duration_sec: "{{ ( !input snooze_duration | int(30) ) * 60 }}"
-  maintenance_date_entity: !input maintenance_date_entity
+# ----------------- INTERNAL SCRIPT: MAIN FINISH FLOW -----------------
+# Note: Scripts can be inlined as blueprinted sequences via "sequence" key.
+# We use an inlined script to keep the finish flow reusable from both trigger paths.
+script:
+  _bosch_dryer_internal_finish_flow:
+    alias: Bosch Dryer Internal Finish Flow
+    sequence:
+      # 1) Increment the service counter
+      - action: counter.increment
+        target:
+          entity_id: "{{ counter_ent }}"
 
-condition: []
-
-action:
-  # 1) Increment service counter and maybe fire maintenance alert
-  - variables:
-      current_cycles: "{{ states(service_counter_entity) | int(0) }}"
-      new_cycles: "{{ current_cycles + 1 }}"
-  - service: input_number.set_value
-    target:
-      entity_id: "{{ service_counter_entity }}"
-    data:
-      value: "{{ new_cycles }}"
-
-  # 2) Send initial "finished" notification with action buttons
-  - repeat:
-      for_each: "{{ notify_services_list }}"
-      sequence:
-        - service: "{{ repeat.item }}"
-          data:
-            title: "{{ dryer_name }} finished"
-            message: "Please empty the drum."
-            data:
-              ttl: 0
-              priority: high
-              actions:
-                - action: "SNOOZE_DRYER"
-                  title: "Snooze {{ (!input snooze_duration)|int }} min"
-                - action: "STOP_DRYER_REMINDERS"
-                  title: "Stop reminders"
-
-  # 3) Maintenance alert if threshold reached
-  - choose:
-      - conditions:
+      # 2) Notify selected devices (loop per device)
+      - variables:
+          _list: "{{ notify_device_list }}"
+      - if:
           - condition: template
-            value_template: "{{ new_cycles >= service_threshold }}"
-        sequence:
+            value_template: "{{ _list is iterable and (_list | count) > 0 }}"
+        then:
           - repeat:
-              for_each: "{{ notify_services_list }}"
+              for_each: "{{ _list }}"
               sequence:
-                - service: "{{ repeat.item }}"
+                # Build the per-device notify service (mobile_app_<slug>)
+                # Uses the device's name; ensure your Companion App device name matches the notify target.
+                - variables:
+                    _dev_name: >-
+                      {{ device_attr(repeat.item, 'name')
+                         | default('', true)
+                         | lower
+                         | replace(' ', '_')
+                         | replace('-', '_') }}
+                - action: >-
+                    {{ 'notify.mobile_app_' ~ _dev_name }}
                   data:
-                    title: "{{ dryer_name }} maintenance due"
-                    message: "Reached {{ new_cycles }} cycles. Clean lint filter / heat exchanger."
-                    data:
-                      ttl: 0
-                      priority: high
-                      actions:
-                        - action: "RESET_DRYER_COUNTER"
-                          title: "Maintenance done (reset)"
-          # Wait (soft) for optional reset action
-          - wait_for_trigger:
-              - platform: event
-                event_type: mobile_app_notification_action
-            timeout: "01:00:00"
-            continue_on_timeout: true
-          - choose:
-              - conditions:
-                  - condition: template
-                    value_template: >
-                      {{ wait.trigger is defined and wait.trigger.event is defined and
-                         wait.trigger.event.data is defined and
-                         wait.trigger.event.data.action == 'RESET_DRYER_COUNTER' }}
-                sequence:
-                  - service: input_number.set_value
-                    target:
-                      entity_id: "{{ service_counter_entity }}"
-                    data:
-                      value: 0
-                  - choose:
-                      - conditions:
-                          - condition: template
-                            value_template: "{{ maintenance_date_entity is string and maintenance_date_entity|length > 0 }}"
-                        sequence:
-                          - service: input_datetime.set_datetime
-                            target:
-                              entity_id: "{{ maintenance_date_entity }}"
-                            data:
-                              date: "{{ now().date() | string }}"
-                  - repeat:
-                      for_each: "{{ notify_services_list }}"
-                      sequence:
-                        - service: "{{ repeat.item }}"
-                          data:
-                            title: "Maintenance reset"
-                            message: "Service cycles reset to 0. Date recorded."
+                    title: "{{ title_end }}"
+                    message: "{{ msg_end }}"
 
-  # 4) Repeated reminder loop: continues until door opens, STOP, or SNOOZE ends
-  - variables:
-      reminder_active: true
-      snoozed: false
-  - repeat:
-      while:
-        - condition: template
-          value_template: >
-            {{ reminder_active and not snoozed and states(door_state_entity) != 'open' }}
-      sequence:
-        - delay:
-            seconds: "{{ reminder_interval_sec | int }}"
-        - repeat:
-            for_each: "{{ notify_services_list }}"
-            sequence:
-              - service: "{{ repeat.item }}"
-                data:
-                  title: "{{ dryer_name }} — reminder"
-                  message: "Clothes are still in the dryer. Please empty the drum."
-                  data:
-                    ttl: 0
-                    priority: high
-                    actions:
-                      - action: "SNOOZE_DRYER"
-                        title: "Snooze {{ (!input snooze_duration)|int }} min"
-                      - action: "STOP_DRYER_REMINDERS"
-                        title: "Stop reminders"
-        - wait_for_trigger:
-            - platform: event
-              event_type: mobile_app_notification_action
-          timeout:
-            seconds: "{{ reminder_interval_sec | int }}"
-          continue_on_timeout: true
-        - choose:
-            # Stop reminders
-            - conditions:
-                - condition: template
-                  value_template: >
-                    {{ wait.trigger is defined and wait.trigger.event is defined and
-                       wait.trigger.event.data is defined and
-                       wait.trigger.event.data.action == 'STOP_DRYER_REMINDERS' }}
-              sequence:
-                - variables:
-                    reminder_active: false
-            # Snooze reminders
-            - conditions:
-                - condition: template
-                  value_template: >
-                    {{ wait.trigger is defined and wait.trigger.event is defined and
-                       wait.trigger.event.data is defined and
-                       wait.trigger.event.data.action == 'SNOOZE_DRYER' }}
-              sequence:
-                - variables:
-                    snoozed: true
-                - delay:
-                    seconds: "{{ snooze_duration_sec | int }}"
-                - variables:
-                    snoozed: false
-
-  # 5) After loop ends, if door is open, send "Thanks"
-  - choose:
-      - conditions:
+      # 3) Maintenance check: if counter >= threshold, send maintenance notification
+      - if:
           - condition: template
-            value_template: "{{ states(door_state_entity) == 'open' }}"
-        sequence:
-          - repeat:
-              for_each: "{{ notify_services_list }}"
-              sequence:
-                - service: "{{ repeat.item }}"
-                  data:
-                    title: "Thanks!"
-                    message: "Dryer emptied. Reminders stopped."
+            value_template: >-
+              {{ states(counter_ent) | int(0) >= (maint_threshold | int) }}
+        then:
+          - if:
+              - condition: template
+                value_template: "{{ _list is iterable and (_list | count) > 0 }}"
+            then:
+              - repeat:
+                  for_each: "{{ _list }}"
+                  sequence:
+                    - variables:
+                        _dev_name: >-
+                          {{ device_attr(repeat.item, 'name')
+                             | default('', true)
+                             | lower
+                             | replace(' ', '_')
+                             | replace('-', '_') }}
+                    - action: >-
+                        {{ 'notify.mobile_app_' ~ _dev_name }}
+                      data:
+                        title: "{{ title_maint }}"
+                        message: "{{ msg_maint }}"
+
+      # 4) Custom actions (if any)
+      - choose: []
+        default: !input custom_actions

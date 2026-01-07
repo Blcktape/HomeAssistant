@@ -1,17 +1,22 @@
 
 blueprint:
-  name: Bosch Home Connect Dryer – Reminders & Service
+  name: Bosch Home Connect Dryer – Reminders & Service (devices + counter + custom actions)
   description: >
-    Sends end-of-cycle notifications, tracks cycles in a Counter helper, and warns for maintenance
-    based on a cycle threshold. Includes device selector for notifications and custom actions.
+    Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter
+    helper, and warns for maintenance based on a cycle threshold. Includes device selector for
+    notifications and a custom actions block for TTS/announcements.
   domain: automation
+  source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/bosch_home_connect_dryer_reminders_and_service/bosch_home_connect_dryer_reminders_and_service.yaml
+  author: Blcktape
+
   input:
     # ---------- Finish detection ----------
     dryer_job_state:
       name: Dryer job state (sensor)
       description: >
-        Sensor that reflects the job state. Cycle is considered finished when the state contains
-        any of the finish keywords. Leave empty if you only use the finished binary sensor.
+        Sensor that reflects the job state. This blueprint considers the cycle finished when
+        this sensor changes to a value containing any of the finish keywords.
+        Leave empty if you only use the finished binary sensor.
       default: []
       selector:
         entity:
@@ -21,8 +26,8 @@ blueprint:
     dryer_finished_binary:
       name: Dryer finished (binary_sensor)
       description: >
-        Optional. Binary sensor that turns ON when the dryer has finished. If provided, it will be
-        used as an additional trigger.
+        Optional. Binary sensor that turns ON when the dryer has finished. If provided,
+        it will be used as an additional trigger.
       default: []
       selector:
         entity:
@@ -31,14 +36,17 @@ blueprint:
 
     finish_keywords:
       name: Finish keywords
-      description: Comma-separated keywords to detect finished state. Example: finish, finished, completed, done
+      description: >
+        Comma-separated keywords to detect a finished state from the job state sensor.
+        Example: finish, finished, completed, done
       default: "finish, finished, completed, done"
       selector:
         text:
 
     finish_stabilize_seconds:
       name: Finish stabilization (seconds)
-      description: How long the finished state must hold before actions run.
+      description: >
+        How long the finished state must hold before actions run.
       default: 30
       selector:
         number:
@@ -51,7 +59,8 @@ blueprint:
     # ---------- Notifications ----------
     notify_devices:
       name: Devices to notify
-      description: Phones/tablets (Home Assistant Companion App) to receive notifications.
+      description: >
+        Pick one or more phones/tablets (Home Assistant Companion App) to receive notifications.
       selector:
         device:
           filter:
@@ -81,7 +90,7 @@ blueprint:
 
     maintenance_threshold_cycles:
       name: Maintenance threshold (cycles)
-      description: Notify when the counter reaches this number of cycles.
+      description: Notify when the service counter reaches this number of cycles.
       default: 5
       selector:
         number:
@@ -110,11 +119,13 @@ blueprint:
     # ---------- Custom actions ----------
     custom_actions:
       name: Custom actions (Optional)
-      description: Extra actions to run after notifications (e.g., TTS/announcements).
+      description: >
+        Extra actions to run after notifications (e.g., TTS or announcements).
       default: []
       selector:
         action: {}
 
+# ---------- Triggers ----------
 trigger:
   - platform: state
     entity_id: !input dryer_job_state
@@ -127,9 +138,13 @@ trigger:
       seconds: !input finish_stabilize_seconds
     id: finished_flag
 
+# ---------- Variables ----------
 variables:
   job_state_ent: !input dryer_job_state
+  finished_bin_ent: !input dryer_finished_binary
   finish_keywords_text: !input finish_keywords
+
+  stabilize_sec: !input finish_stabilize_seconds
   notify_device_list: !input notify_devices
 
   counter_ent: !input service_counter
@@ -140,7 +155,11 @@ variables:
   title_maint: !input maintenance_title
   msg_maint: !input maintenance_message
 
-  # Parse keywords
+  job_state_now: >-
+    {% if job_state_ent %}
+      {{ states(job_state_ent) | default('', true) | lower }}
+    {% else %}{{ '' }}{% endif %}
+
   kw_list: >-
     {{ (finish_keywords_text | default('', true) | lower)
        | replace(';', ',')
@@ -148,12 +167,6 @@ variables:
        | map('trim')
        | select('ne','')
        | list }}
-
-  # Current job state (lowercase)
-  job_state_now: >-
-    {% if job_state_ent %}
-      {{ states(job_state_ent) | default('', true) | lower }}
-    {% else %}{{ '' }}{% endif %}
 
   is_finished_by_text: >-
     {% set s = job_state_now %}
@@ -163,8 +176,10 @@ variables:
       {{ (kw_list | select('in', s) | list | count) > 0 }}
     {% endif %}
 
+# ---------- Conditions ----------
 condition: []
 
+# ---------- Actions ----------
 action:
   - choose:
       # A) Finished via binary_sensor
@@ -173,10 +188,12 @@ action:
             id: finished_flag
         sequence:
           - action: counter.increment
-            target: { entity_id: !input service_counter }
+            target:
+              entity_id: !input service_counter
 
-          # Notify each selected mobile_app device
-          - variables: { _list: !input notify_devices }
+          # Notify selected devices (loop)
+          - variables:
+              _list: !input notify_devices
           - if:
               - condition: template
                 value_template: "{{ _list is iterable and (_list | count) > 0 }}"
@@ -184,10 +201,10 @@ action:
               - repeat:
                   for_each: "{{ _list }}"
                   sequence:
-                    # Use device name to build notify.mobile_app_<device_name>
                     - variables:
                         _dev_name: >-
-                          {{ device_attr(repeat.item, 'name') | default('', true)
+                          {{ device_attr(repeat.item, 'name')
+                             | default('', true)
                              | lower | replace(' ', '_') | replace('-', '_') }}
                     - action: >-
                         {{ 'notify.mobile_app_' ~ _dev_name }}
@@ -210,7 +227,8 @@ action:
                       sequence:
                         - variables:
                             _dev_name: >-
-                              {{ device_attr(repeat.item, 'name') | default('', true)
+                              {{ device_attr(repeat.item, 'name')
+                                 | default('', true)
                                  | lower | replace(' ', '_') | replace('-', '_') }}
                         - action: >-
                             {{ 'notify.mobile_app_' ~ _dev_name }}
@@ -229,7 +247,9 @@ action:
           - condition: template
             value_template: "{{ is_finished_by_text }}"
         sequence:
-          - delay: { seconds: !input finish_stabilize_seconds }
+          # Stabilize window
+          - delay:
+              seconds: !input finish_stabilize_seconds
 
           # Re-check still finished by keywords
           - condition: template
@@ -237,10 +257,14 @@ action:
               {% set cur = states(job_state_ent) | default('', true) | lower %}
               {{ kw_list | select('in', cur) | list | count > 0 }}
 
+          # Increment counter
           - action: counter.increment
-            target: { entity_id: !input service_counter }
+            target:
+              entity_id: !input service_counter
 
-          - variables: { _list: !input notify_devices }
+          # Notify selected devices
+          - variables:
+              _list: !input notify_devices
           - if:
               - condition: template
                 value_template: "{{ _list is iterable and (_list | count) > 0 }}"
@@ -250,7 +274,8 @@ action:
                   sequence:
                     - variables:
                         _dev_name: >-
-                          {{ device_attr(repeat.item, 'name') | default('', true)
+                          {{ device_attr(repeat.item, 'name')
+                             | default('', true)
                              | lower | replace(' ', '_') | replace('-', '_') }}
                     - action: >-
                         {{ 'notify.mobile_app_' ~ _dev_name }}
@@ -258,6 +283,7 @@ action:
                         title: !input end_title
                         message: !input end_message
 
+          # Maintenance check
           - if:
               - condition: template
                 value_template: >-
@@ -272,7 +298,8 @@ action:
                       sequence:
                         - variables:
                             _dev_name: >-
-                              {{ device_attr(repeat.item, 'name') | default('', true)
+                              {{ device_attr(repeat.item, 'name')
+                                 | default('', true)
                                  | lower | replace(' ', '_') | replace('-', '_') }}
                         - action: >-
                             {{ 'notify.mobile_app_' ~ _dev_name }}
@@ -280,6 +307,7 @@ action:
                             title: !input maintenance_title
                             message: !input maintenance_message
 
+          # Custom actions
           - choose: []
             default: !input custom_actions
     default: []

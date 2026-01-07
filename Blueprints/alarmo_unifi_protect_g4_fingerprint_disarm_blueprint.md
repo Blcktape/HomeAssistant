@@ -1,7 +1,7 @@
 # Alarmo UniFi Protect G4 Fingerprint Disarm Blueprint
 
 ## Version
-
+Alpha
 **2026-01-07**
 
 ## Overview

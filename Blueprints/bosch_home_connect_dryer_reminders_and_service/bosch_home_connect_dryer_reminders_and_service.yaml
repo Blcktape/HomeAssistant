@@ -76,11 +76,11 @@ blueprint:
           mode: slider
 
     service_counter_entity:
-      name: Service counter (input_number)
+      name: Service counter (counter)
       description: Select the input_number helper that stores dryer service cycles.
       selector:
         entity:
-          domain: input_number
+          domain: counter
 
     service_threshold:
       name: Maintenance threshold (cycles)
@@ -88,8 +88,8 @@ blueprint:
       default: 50
       selector:
         number:
-          min: 10
-          max: 500
+          min: 5
+          max: 50
           step: 1
           mode: slider
 

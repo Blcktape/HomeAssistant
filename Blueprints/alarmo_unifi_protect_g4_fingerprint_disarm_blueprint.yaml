@@ -1,0 +1,129 @@
+
+blueprint:
+  name: Security - Alarmo - Fingerprint Scan Disarm (Scalable, Blueprint)
+  description: >
+    Disarm Alarmo using UniFi Protect G4 Doorbell fingerprints,
+    with per-user authorization and per-user disarm codes.
+    Select the "authorized users" sensor (with a 'users' attribute containing JSON).
+    Fully scalable: maintain users in the sensor attribute.
+  domain: automation
+
+  input:
+    authorized_users_sensor:
+      name: Authorized users sensor
+      description: >
+        Select the sensor that contains a 'users' attribute (JSON)
+        mapping ULP IDs to objects (e.g. { "ULP123": { "name": "Alice", "code": "1234" }, ... }).
+      selector:
+        entity:
+          domain: sensor
+
+# -------------------- Original automation converted to blueprint --------------------
+
+alias: Security - Alarmo - Fingerprint Scan Disarm (Scalable)
+description: |-
+  Disarm Alarmo using UniFi Protect G4 Doorbell fingerprints,
+  with per-user authorization and per-user disarm codes.
+  Fully scalable: add users in the `authorized_users` sensor attribute.
+triggers:
+  - alias: Fingerprint Scan Event
+    event_type: state_changed
+    event_data:
+      entity_id: event.camera_doorbell_fingerprint
+    trigger: event
+
+conditions:
+  - alias: Defensive Filter - Valid Identified Event
+    condition: template
+    value_template: |-
+      {{
+        trigger.event.data.old_state is not none and
+        trigger.event.data.new_state is not none and
+        not trigger.event.data.old_state.attributes.get('restored', false) and
+        trigger.event.data.old_state.state != 'unavailable' and
+        trigger.event.data.new_state.attributes.event_type == 'identified' and
+        (trigger.event.data.new_state.attributes.ulp_id | default('')) != ''
+      }}
+
+  - alias: 5 Second Recency Filter
+    condition: template
+    value_template: |-
+      {{ trigger.event.data.new_state.state | as_datetime(as_datetime(0)) >
+         now() - timedelta(seconds=5) }}
+
+  - alias: Alarmo must be armed
+    condition: state
+    entity_id: alarm_control_panel.alarmo
+    state:
+      - armed_away
+      - armed_home
+      - armed_night
+
+actions:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ current_user is not none }}"
+        sequence:
+          - target:
+              entity_id: alarm_control_panel.alarmo
+            data:
+              code: "{{ user_code }}"
+            action: alarm_control_panel.alarm_disarm
+
+          - data:
+              title: "🔓 Alarm Disarmed"
+              message: >-
+                [{{ now().strftime('%H:%M:%S') }}] Alarm disarmed by fingerprint:
+                {{ user_display_name }} (ULP ID: {{ scanned_ulp_id }})
+            action: notify.notify_phone
+
+          - data:
+              name: Alarmo Audit
+              message: >-
+                Disarmed by {{ user_display_name }} via fingerprint scan
+              entity_id: alarm_control_panel.alarmo
+            action: logbook.log
+
+    default:
+      - data:
+          title: "🚨 Unknown Fingerprint"
+          message: >-
+            [{{ now().strftime('%H:%M:%S') }}] Fingerprint detected but not authorized.
+
+            Name: {{ scanned_name }}
+            ULP ID: {{ scanned_ulp_id }}
+            Status: {{ trigger.event.data.new_state.attributes.user_status }}
+        action: notify.notify_phone
+
+      - data:
+          name: Alarmo Audit
+          message: >-
+            Unauthorized fingerprint attempt: {{ scanned_name }} (ULP ID: {{ scanned_ulp_id }})
+          entity_id: alarm_control_panel.alarmo
+        action: logbook.log
+
+variables:
+  scanned_ulp_id: "{{ trigger.event.data.new_state.attributes.ulp_id }}"
+  scanned_name: "{{ trigger.event.data.new_state.attributes.full_name }}"
+
+  # Pull authorized users JSON from the selected sensor's 'users' attribute.
+  # Handles both JSON string and already-parsed dict forms safely.
+  authorized_users_sensor: !input authorized_users_sensor
+  authorized_users: >-
+    {% set users_attr = state_attr(authorized_users_sensor, 'users') %}
+    {% if users_attr is string %}
+      {{ users_attr | from_json }}
+    {% elif users_attr is mapping %}
+      {{ users_attr }}
+    {% else %}
+      {{ {} }}
+    {% endif %}
+
+  current_user: "{{ authorized_users.get(scanned_ulp_id) }}"
+  user_code: "{{ current_user.code if current_user is not none else '' }}"
+  user_display_name: "{{ current_user.name if current_user is not none else scanned_name }}"
+
+mode: single
+trace:
+  stored_traces: 15

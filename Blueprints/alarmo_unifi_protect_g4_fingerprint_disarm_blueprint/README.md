@@ -135,6 +135,6 @@ When a fingerprint scan occurs on your UniFi Protect G4 Doorbell, the integratio
 
 ## Import Blueprint
 
-[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/alarmo_unifi_protect_g4_fingerprint_disarm_blueprint.yaml)
+[![Import Blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/alarmo_unifi_protect_g4_fingerprint_disarm_blueprint/alarmo_unifi_protect_g4_fingerprint_disarm_blueprint.yaml)
 
 **Next Steps**: Click the button above to import the blueprint into Home Assistant, select your entities, and enjoy secure fingerprint-based disarming!

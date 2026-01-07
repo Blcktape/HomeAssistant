@@ -2,8 +2,7 @@
 
 ## Version
 
-**2026-01-07**
-- Alpha
+**2026-01-07** (Beta)
 
 ## Overview
 

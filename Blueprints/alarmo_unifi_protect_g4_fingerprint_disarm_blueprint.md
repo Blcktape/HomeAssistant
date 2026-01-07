@@ -75,12 +75,6 @@ template:
     - If authorized: Disarms Alarmo using the user’s code, sends a success notification, and logs the event.
     - If unauthorized: Sends a warning notification and logs the attempt.
 
-## File Name Suggestion
-
-```
-alarmo_unifi_protect_g4_fingerprint_disarm_blueprint_v1_2026-01-07.yaml
-```
-
 ## Notes
 
 - Ensure the authorized users sensor is correctly configured and contains valid JSON.

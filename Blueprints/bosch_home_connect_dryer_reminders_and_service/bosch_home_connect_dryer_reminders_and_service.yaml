@@ -7,7 +7,7 @@ blueprint:
     notifications and a custom actions block for TTS/announcements.
   domain: automation
   source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/bosch_home_connect_dryer_reminders_and_service/bosch_home_connect_dryer_reminders_and_service.yaml
-  author: Blcktape (adjusted by Jan/Copilot)
+  author: Blcktape
 
 input:
   # ---------- Finish detection ----------

@@ -37,6 +37,15 @@ blueprint:
         entity:
           filter:
             - domain: sensor
+            
+    door_state_sensor:
+      name: Door state sensor
+      description: Select your dryer door state sensor (states like 'open' / 'closed' / 'locked').
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+
 
     finish_stabilize_seconds:
       name: Finish stabilization (seconds)
@@ -49,29 +58,7 @@ blueprint:
           step: 5
           unit_of_measurement: sec
           mode: slider
-
-    # ---------- Door reminder to empty the dryer ----------
-    door_state_sensor:
-      name: Door state sensor
-      description: Select your dryer door state sensor (states like 'open' / 'closed' / 'locked').
-      selector:
-        entity:
-          filter:
-            - domain: sensor
-
-    empty_dryer_title:
-      name: Empty reminder title
-      default: "Empty Dryer"
-      selector:
-        text:
-
-    empty_dryer_message:
-      name: Empty reminder message
-      default: "Dryer door opened. Please empty the lint filter and remove laundry."
-      selector:
-        text:
-
-    # ---------- End notifications ----------
+          
     notify_devices:
       name: Devices to notify
       description: Phones/tablets (Home Assistant Companion App) to receive notifications.
@@ -81,6 +68,27 @@ blueprint:
             - integration: mobile_app
           multiple: true
 
+    # ---------- Cycle start notification ----------
+    include_start_notify:
+      name: Enable start notification
+      description: Toggle to send a notification when the cycle starts (run/delayedstart).
+      default: false
+      selector:
+        boolean:
+
+    start_title:
+      name: Start notification title
+      default: "Dryer"
+      selector:
+        text:
+
+    start_message:
+      name: Start notification message
+      default: "Cycle started."
+      selector:
+        text:
+
+    # ---------- End notifications ----------
     end_title:
       name: End notification title
       default: "Dryer"
@@ -90,6 +98,19 @@ blueprint:
     end_message:
       name: End notification message
       default: "Cycle has finished."
+      selector:
+        text:
+
+    # ---------- Door reminder to empty the dryer ----------
+    empty_dryer_title:
+      name: Empty reminder title
+      default: "Empty Dryer"
+      selector:
+        text:
+
+    empty_dryer_message:
+      name: Empty reminder message
+      default: "Dryer door opened. Please empty the lint filter and remove laundry."
       selector:
         text:
 
@@ -130,37 +151,17 @@ blueprint:
       selector:
         text:
 
-    # ---------- Custom actions after end ----------
-    custom_actions:
-      name: Custom actions (Optional)
-      description: Extra actions to run after end/maintenance notifications (e.g., TTS/announcements).
-      default: []
-      selector:
-        action: {}
-
-    # ---------- NEW: Cycle start notification + actions ----------
-    include_start_notify:
-      name: Enable start notification
-      description: Toggle to send a notification when the cycle starts (run/delayedstart).
-      default: false
-      selector:
-        boolean:
-
-    start_title:
-      name: Start notification title
-      default: "Dryer"
-      selector:
-        text:
-
-    start_message:
-      name: Start notification message
-      default: "Cycle started."
-      selector:
-        text:
-
+    # ---------- Custom actions ----------
     start_custom_actions:
       name: Custom actions on start (Optional)
       description: Extra actions to run when the cycle starts (e.g., TTS/announcements).
+      default: []
+      selector:
+        action: {}
+    
+    custom_actions:
+      name: Custom actions after end (Optional)
+      description: Extra actions to run after end/maintenance notifications (e.g., TTS/announcements).
       default: []
       selector:
         action: {}

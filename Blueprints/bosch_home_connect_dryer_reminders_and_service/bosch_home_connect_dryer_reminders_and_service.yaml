@@ -144,7 +144,7 @@ tionblueprint:
           name: Maintenance notification title
           default: "Dryer maintenance"
           selector:
-            text: 
+            text: {}
         maintenance_message:
           name: Maintenance notification message
           description: >
@@ -154,7 +154,7 @@ tionblueprint:
             The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
             Time for routine maintenance.
           selector:
-            text: 
+            text: {}
 
     # ---------- Custom actions ----------
     custom_actions_section:

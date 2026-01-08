@@ -45,7 +45,6 @@ tionblueprint:
           filter:
             - domain: sensor
 
-
     finish_stabilize_seconds:
       name: Finish stabilization (seconds)
       description: How long the finished state must hold before end actions run.
@@ -91,6 +90,7 @@ tionblueprint:
             text: {}
 
     # ---------- End notifications ----------
+    # ---------- Door reminder to empty the dryer ----------
     end_notifications_section:
       name: End Notification
       icon: mdi:play-circle
@@ -106,7 +106,6 @@ tionblueprint:
           default: "Cycle has finished."
           selector:
             text: {}
-        # ---------- Door reminder to empty the dryer ----------
         empty_dryer_title:
           name: Empty reminder title
           default: "Empty Dryer"
@@ -145,7 +144,7 @@ tionblueprint:
           name: Maintenance notification title
           default: "Dryer maintenance"
           selector:
-            text: {}
+            text: 
         maintenance_message:
           name: Maintenance notification message
           description: >
@@ -155,7 +154,7 @@ tionblueprint:
             The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
             Time for routine maintenance.
           selector:
-            text: {}
+            text: 
 
     # ---------- Custom actions ----------
     custom_actions_section:

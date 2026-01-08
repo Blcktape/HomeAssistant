@@ -24,7 +24,7 @@ blueprint:
       description: Plain text name used in notifications.
       default: "Dryer"
       selector:
-        text:
+        text: {}
 
     # ---------- Finish detection via Operation State ----------
     operation_state_sensor:
@@ -84,12 +84,12 @@ blueprint:
           name: Start notification title
           default: "Dryer"
           selector:
-            text:
+            text: 
         start_message:
           name: Start notification message
           default: "Cycle started."
           selector:
-        text:
+            text:
 
     # ---------- End notifications ----------
     end_notifications:

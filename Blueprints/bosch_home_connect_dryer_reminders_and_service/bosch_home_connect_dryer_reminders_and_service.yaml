@@ -1,4 +1,4 @@
-blueprint:
+tionblueprint:
   name: Bosch Home Connect Dryer – Reminders & Service
   description: >
     # Bosch Home Connect Dryer – Reminders & Service
@@ -68,8 +68,7 @@ blueprint:
           multiple: true
 
     # ---------- Cycle start notification ----------
-    
-    start_notifications:
+    start_notifications_section:
       name: Start Notification
       icon: mdi:play-circle
       collapsed: true
@@ -92,7 +91,7 @@ blueprint:
             text: {}
 
     # ---------- End notifications ----------
-    end_notifications:
+    end_notifications_section:
       name: End Notification
       icon: mdi:play-circle
       collapsed: true
@@ -120,7 +119,7 @@ blueprint:
             text: {}
 
     # ---------- Service / maintenance tracking ----------
-    maintenance_notifications:
+    maintenance_notifications_section:
       name: Maintenance Notification
       icon: mdi:play-circle
       collapsed: true
@@ -159,7 +158,7 @@ blueprint:
             text: {}
 
     # ---------- Custom actions ----------
-    custom_actions:
+    custom_actions_section:
       name: Custom Actions
       icon: mdi:play-circle
       collapsed: true

@@ -146,7 +146,7 @@ blueprint:
           name: Maintenance notification title
           default: "Dryer maintenance"
           selector:
-            text:
+            text: {}
         maintenance_message:
           name: Maintenance notification message
           description: >

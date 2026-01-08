@@ -81,13 +81,11 @@ blueprint:
           default: false
           selector:
             boolean:
-      
         start_title:
           name: Start notification title
           default: "Dryer"
           selector:
             text:
-      
         start_message:
           name: Start notification message
           default: "Cycle started."
@@ -105,20 +103,17 @@ blueprint:
           default: "Dryer"
           selector:
             text:
-    
         end_message:
           name: End notification message
           default: "Cycle has finished."
           selector:
             text:
-
         # ---------- Door reminder to empty the dryer ----------
         empty_dryer_title:
           name: Empty reminder title
           default: "Empty Dryer"
           selector:
             text:
-    
         empty_dryer_message:
           name: Empty reminder message
           default: "Dryer door opened. Please empty the lint filter and remove laundry."
@@ -138,7 +133,6 @@ blueprint:
             entity:
               filter:
                 - domain: counter
-    
         maintenance_threshold_cycles:
           name: Maintenance threshold (cycles)
           description: Notify when the counter reaches this number of cycles.
@@ -149,13 +143,11 @@ blueprint:
               max: 50
               step: 1
               mode: slider
-    
         maintenance_title:
           name: Maintenance notification title
           default: "Dryer maintenance"
           selector:
             text:
-    
         maintenance_message:
           name: Maintenance notification message
           description: >
@@ -179,7 +171,6 @@ blueprint:
           default: []
           selector:
             action: {}
-        
         end_custom_actions:
           name: Custom actions after end (Optional)
           description: Extra actions to run after end/maintenance notifications (e.g., TTS/announcements).

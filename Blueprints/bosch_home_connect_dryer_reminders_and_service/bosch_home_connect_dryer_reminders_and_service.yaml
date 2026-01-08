@@ -79,17 +79,17 @@ blueprint:
           description: Toggle to send a notification when the cycle starts (run/delayedstart).
           default: false
           selector:
-            boolean:
+            boolean: {}
         start_title:
           name: Start notification title
           default: "Dryer"
           selector:
-            text: 
+            text: {}
         start_message:
           name: Start notification message
           default: "Cycle started."
           selector:
-            text:
+            text: {}
 
     # ---------- End notifications ----------
     end_notifications:
@@ -101,23 +101,23 @@ blueprint:
           name: End notification title
           default: "Dryer"
           selector:
-            text:
+            text: {}
         end_message:
           name: End notification message
           default: "Cycle has finished."
           selector:
-            text:
+            text: {}
         # ---------- Door reminder to empty the dryer ----------
         empty_dryer_title:
           name: Empty reminder title
           default: "Empty Dryer"
           selector:
-            text:
+            text: {}
         empty_dryer_message:
           name: Empty reminder message
           default: "Dryer door opened. Please empty the lint filter and remove laundry."
           selector:
-            text:
+            text: {}
 
     # ---------- Service / maintenance tracking ----------
     maintenance_notifications:
@@ -156,7 +156,7 @@ blueprint:
             The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
             Time for routine maintenance.
           selector:
-            text:
+            text: {}
 
     # ---------- Custom actions ----------
     custom_actions:

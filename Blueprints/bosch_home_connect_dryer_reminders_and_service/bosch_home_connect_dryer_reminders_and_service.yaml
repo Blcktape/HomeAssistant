@@ -3,11 +3,9 @@ blueprint:
   name: Bosch Home Connect Dryer – Reminders & Service (friendly name + operation/door sensors)
   description: >
     Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter,
-    reminds to empty the dryer when the door opens, and warns for maintenance based on a cycle threshold.
-    Uses the Operation State sensor for finish detection and a Door State sensor for the empty reminder.
+    reminds to empty the dryer when the door opens, warns for maintenance based on a cycle threshold,
+    and (optionally) notifies + runs custom actions when the cycle starts.
   domain: automation
-  source_url: https://github.com/Blcktape/HomeAssistant/blob/main/Blueprints/bosch_home_connect_dryer_reminders_and_service/bosch_home_connect_dryer_reminders_and_service.yaml
-  author: Blcktape
 
   input:
     # ---------- Dryer identification ----------
@@ -62,7 +60,7 @@ blueprint:
       selector:
         text:
 
-    # ---------- Notifications ----------
+    # ---------- End notifications ----------
     notify_devices:
       name: Devices to notify
       description: Phones/tablets (Home Assistant Companion App) to receive notifications.
@@ -121,7 +119,7 @@ blueprint:
       selector:
         text:
 
-    # ---------- Custom actions ----------
+    # ---------- Custom actions after end ----------
     custom_actions:
       name: Custom actions (Optional)
       description: Extra actions to run after end/maintenance notifications (e.g., TTS/announcements).
@@ -129,9 +127,36 @@ blueprint:
       selector:
         action: {}
 
+    # ---------- NEW: Cycle start notification + actions ----------
+    include_start_notify:
+      name: Enable start notification
+      description: Toggle to send a notification when the cycle starts (run/delayedstart).
+      default: false
+      selector:
+        boolean:
+
+    start_title:
+      name: Start notification title
+      default: "Dryer"
+      selector:
+        text:
+
+    start_message:
+      name: Start notification message
+      default: "Cycle started."
+      selector:
+        text:
+
+    start_custom_actions:
+      name: Custom actions on start (Optional)
+      description: Extra actions to run when the cycle starts (e.g., TTS/announcements).
+      default: []
+      selector:
+        action: {}
+
 # ---------- Triggers ----------
 trigger:
-  # A) Operation state indicates finished
+  # A) Operation state changes (handles both start and finish)
   - platform: state
     entity_id: !input operation_state_sensor
     id: op_state_changed
@@ -161,13 +186,19 @@ variables:
   msg_maint_in: !input maintenance_message
   title_empty_in: !input empty_dryer_title
   msg_empty_in: !input empty_dryer_message
+  title_start_in: !input start_title
+  msg_start_in: !input start_message
+
   dryer_friendly_name: !input dryer_friendly_name
+  include_start_notify: !input include_start_notify
 
   # BAKED-IN words (no split/filter required)
-  # Finish is detected when the operation state contains 'finished'
   finished_word: "finished"
-  # Door open is detected when door state equals 'open'
   door_open_word: "open"
+
+  # Start detection words (baked-in)
+  start_words: >-
+    {{ ['run', 'delayedstart'] }}
 
   # Current states (lowercased)
   op_state_now: >-
@@ -186,6 +217,9 @@ variables:
   is_door_open: >-
     {% set d = door_state_now %}
     {{ d == door_open_word }}
+  is_started_by_op_state: >-
+    {% set s = op_state_now %}
+    {{ s in start_words }}
 
   # Compose titles/messages with friendly fallback
   title_end: >-
@@ -211,12 +245,19 @@ variables:
     {% set me = msg_empty_in | default('', true) %}
     {{ me if me | length > 0 else (dryer_friendly_name ~ ' door opened. Please empty the lint filter and remove laundry.') }}
 
+  title_start: >-
+    {% set ts = title_start_in | default('', true) %}
+    {{ ts if ts | length > 0 else dryer_friendly_name }}
+  msg_start: >-
+    {% set ms = msg_start_in | default('', true) %}
+    {{ ms if ms | length > 0 else ('Cycle started.') }}
+
 condition: []
 
 # ---------- Actions ----------
 action:
   - choose:
-      # A) Finished via operation state
+      # A) FINISH path (operation state indicates finished)
       - conditions:
           - condition: trigger
             id: op_state_changed
@@ -249,7 +290,6 @@ action:
                   for_each: "{{ _list }}"
                   sequence:
                     - variables:
-                        # Build the mobile_app notify service from device name
                         _dev_name: >-
                           {{ device_attr(repeat.item, 'name') | default('', true)
                              | lower | replace(' ', '_') | replace('-', '_') }}
@@ -282,11 +322,46 @@ action:
                             title: "{{ title_maint }}"
                             message: "{{ msg_maint }}"
 
-          # Custom actions
+          # Custom actions after end
           - choose: []
             default: !input custom_actions
 
-      # B) Door opened -> empty reminder (only when op_state says finished)
+      # B) START path (operation state indicates started: run/delayedstart)
+      - conditions:
+          - condition: trigger
+            id: op_state_changed
+          - condition: template
+            value_template: "{{ is_started_by_op_state }}"
+        sequence:
+          # Optional start notification
+          - if:
+              - condition: template
+                value_template: "{{ include_start_notify }}"
+            then:
+              - variables:
+                  _list: !input notify_devices
+              - if:
+                  - condition: template
+                    value_template: "{{ _list is iterable and (_list | count) > 0 }}"
+                then:
+                  - repeat:
+                      for_each: "{{ _list }}"
+                      sequence:
+                        - variables:
+                            _dev_name: >-
+                              {{ device_attr(repeat.item, 'name') | default('', true)
+                                 | lower | replace(' ', '_') | replace('-', '_') }}
+                        - action: >-
+                            {{ 'notify.mobile_app_' ~ _dev_name }}
+                          data:
+                            title: "{{ title_start }}"
+                            message: "{{ msg_start }}"
+
+          # Custom actions on start (if provided)
+          - choose: []
+            default: !input start_custom_actions
+
+      # C) DOOR OPEN path -> empty reminder (only when op_state says finished)
       - conditions:
           - condition: trigger
             id: door_state_changed

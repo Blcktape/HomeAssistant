@@ -1,10 +1,21 @@
 
 blueprint:
-  name: Bosch Home Connect Dryer – Reminders & Service (friendly name + operation/door sensors)
+  name: Bosch Home Connect Dryer – Reminders & Service
   description: >
+    # Bosch Home Connect Dryer – Reminders & Service
+  
+    **Version:** 2026-01-08 - Beta
+
+    
     Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter,
     reminds to empty the dryer when the door opens, warns for maintenance based on a cycle threshold,
     and (optionally) notifies + runs custom actions when the cycle starts.
+    
+
+    **Readme:**
+    https://github.com/Blcktape/HomeAssistant/tree/main/Blueprints/bosch_home_connect_dryer_reminders_and_service
+  
+  source_url: https://github.com/Blcktape/HomeAssistant/tree/main/Blueprints/bosch_home_connect_dryer_reminders_and_service
   domain: automation
 
   input:

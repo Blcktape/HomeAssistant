@@ -127,9 +127,9 @@ blueprint:
           name: Service counter (counter)
           description: Counter helper that tracks the number of dryer cycles.
           selector:
-            entity:
-              filter:
-                - domain: counter
+          entity:
+          filter:
+            - domain: counter
         maintenance_threshold_cycles:
           name: Maintenance threshold (cycles)
           description: Notify when the counter reaches this number of cycles.
@@ -145,16 +145,15 @@ blueprint:
           default: "Dryer maintenance"
           selector:
             text: {}
-        maintenance_message:
-          name: Maintenance notification message
-          description: >
-            You can reference {{ states(service_counter) }} for the current counter and {{ maintenance_threshold_cycles }} for the threshold.
-          default: >
-            The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
-            Time for routine maintenance.
-          selector:
-            text: {}
-
+          maintenance_message:
+            name: Maintenance notification message
+            description: >
+              You can reference {{ states(service_counter) }} for the current counter and {{ maintenance_threshold_cycles }} for the threshold.
+            default: >
+              The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
+              Time for routine maintenance.
+            selector:
+              text: {}
 
     # ---------- Custom actions ----------
     custom_actions_section:

@@ -148,10 +148,10 @@ blueprint:
         maintenance_message:
           name: Maintenance notification message
           description: >
-            This text appears in the UI. Dynamic values will be applied by the automation
-            when sending the notification. (You can edit the final message logic in variables/actions.)
+            You can reference {{ states(service_counter) }} for the current counter and {{ maintenance_threshold_cycles }} for the threshold.
           default: >
-            Maintenance due.
+            The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
+            Time for routine maintenance.
           selector:
             text: {}
 

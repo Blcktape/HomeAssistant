@@ -69,102 +69,123 @@ blueprint:
           multiple: true
 
     # ---------- Cycle start notification ----------
-    include_start_notify:
-      name: Enable start notification
-      description: Toggle to send a notification when the cycle starts (run/delayedstart).
-      default: false
-      selector:
-        boolean:
-
-    start_title:
-      name: Start notification title
-      default: "Dryer"
-      selector:
-        text:
-
-    start_message:
-      name: Start notification message
-      default: "Cycle started."
-      selector:
+    
+    start_notifications:
+      name: Start Notification
+      icon: mdi:play-circle
+      collapsed: true
+      input:
+        include_start_notify:
+          name: Enable start notification
+          description: Toggle to send a notification when the cycle starts (run/delayedstart).
+          default: false
+          selector:
+            boolean:
+      
+        start_title:
+          name: Start notification title
+          default: "Dryer"
+          selector:
+            text:
+      
+        start_message:
+          name: Start notification message
+          default: "Cycle started."
+          selector:
         text:
 
     # ---------- End notifications ----------
-    end_title:
-      name: End notification title
-      default: "Dryer"
-      selector:
-        text:
+    end_notifications:
+      name: End Notification
+      icon: mdi:play-circle
+      collapsed: true
+      input:
+        end_title:
+          name: End notification title
+          default: "Dryer"
+          selector:
+            text:
+    
+        end_message:
+          name: End notification message
+          default: "Cycle has finished."
+          selector:
+            text:
 
-    end_message:
-      name: End notification message
-      default: "Cycle has finished."
-      selector:
-        text:
-
-    # ---------- Door reminder to empty the dryer ----------
-    empty_dryer_title:
-      name: Empty reminder title
-      default: "Empty Dryer"
-      selector:
-        text:
-
-    empty_dryer_message:
-      name: Empty reminder message
-      default: "Dryer door opened. Please empty the lint filter and remove laundry."
-      selector:
-        text:
+        # ---------- Door reminder to empty the dryer ----------
+        empty_dryer_title:
+          name: Empty reminder title
+          default: "Empty Dryer"
+          selector:
+            text:
+    
+        empty_dryer_message:
+          name: Empty reminder message
+          default: "Dryer door opened. Please empty the lint filter and remove laundry."
+          selector:
+            text:
 
     # ---------- Service / maintenance tracking ----------
-    service_counter:
-      name: Service counter (counter)
-      description: Counter helper that tracks the number of dryer cycles.
-      selector:
-        entity:
-          filter:
-            - domain: counter
-
-    maintenance_threshold_cycles:
-      name: Maintenance threshold (cycles)
-      description: Notify when the counter reaches this number of cycles.
-      default: 5
-      selector:
-        number:
-          min: 1
-          max: 50
-          step: 1
-          mode: slider
-
-    maintenance_title:
-      name: Maintenance notification title
-      default: "Dryer maintenance"
-      selector:
-        text:
-
-    maintenance_message:
-      name: Maintenance notification message
-      description: >
-        You can reference {{ states(service_counter) }} for the current counter and
-        {{ maintenance_threshold_cycles }} for the threshold.
-      default: >
-        The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
-        Time for routine maintenance.
-      selector:
-        text:
+    maintenance_notifications:
+      name: Maintenance Notification
+      icon: mdi:play-circle
+      collapsed: true
+      input:
+        service_counter:
+          name: Service counter (counter)
+          description: Counter helper that tracks the number of dryer cycles.
+          selector:
+            entity:
+              filter:
+                - domain: counter
+    
+        maintenance_threshold_cycles:
+          name: Maintenance threshold (cycles)
+          description: Notify when the counter reaches this number of cycles.
+          default: 5
+          selector:
+            number:
+              min: 1
+              max: 50
+              step: 1
+              mode: slider
+    
+        maintenance_title:
+          name: Maintenance notification title
+          default: "Dryer maintenance"
+          selector:
+            text:
+    
+        maintenance_message:
+          name: Maintenance notification message
+          description: >
+            You can reference {{ states(service_counter) }} for the current counter and
+            {{ maintenance_threshold_cycles }} for the threshold.
+          default: >
+            The dryer has run {{ states(service_counter) | int(0) }} cycles (threshold {{ maintenance_threshold_cycles }}).
+            Time for routine maintenance.
+          selector:
+            text:
 
     # ---------- Custom actions ----------
-    start_custom_actions:
-      name: Custom actions on start (Optional)
-      description: Extra actions to run when the cycle starts (e.g., TTS/announcements).
-      default: []
-      selector:
-        action: {}
-    
     custom_actions:
-      name: Custom actions after end (Optional)
-      description: Extra actions to run after end/maintenance notifications (e.g., TTS/announcements).
-      default: []
-      selector:
-        action: {}
+      name: Custom Actions
+      icon: mdi:play-circle
+      collapsed: true
+      input:
+        start_custom_actions:
+          name: Custom actions on start (Optional)
+          description: Extra actions to run when the cycle starts (e.g., TTS/announcements).
+          default: []
+          selector:
+            action: {}
+        
+        end_custom_actions:
+          name: Custom actions after end (Optional)
+          description: Extra actions to run after end/maintenance notifications (e.g., TTS/announcements).
+          default: []
+          selector:
+            action: {}
 
 # ---------- Triggers ----------
 trigger:
@@ -336,7 +357,7 @@ action:
 
           # Custom actions after end
           - choose: []
-            default: !input custom_actions
+            default: !input end_custom_actions
 
       # B) START path (operation state indicates started: run/delayedstart)
       - conditions:

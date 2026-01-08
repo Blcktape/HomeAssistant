@@ -127,9 +127,9 @@ blueprint:
           name: Service counter (counter)
           description: Counter helper that tracks the number of dryer cycles.
           selector:
-          entity:
-          filter:
-            - domain: counter
+            entity:
+              filter:
+                - domain: counter
         maintenance_threshold_cycles:
           name: Maintenance threshold (cycles)
           description: Notify when the counter reaches this number of cycles.

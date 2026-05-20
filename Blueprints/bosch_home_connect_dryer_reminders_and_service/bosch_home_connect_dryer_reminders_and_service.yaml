@@ -3,7 +3,7 @@ blueprint:
   description: >
     # Bosch Home Connect Dryer – Reminders & Service
   
-    **Version:** 2026-05-20.5 - Beta
+    **Version:** 2026-05-20.6 - Beta
 
     
     Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter,
@@ -123,21 +123,6 @@ blueprint:
       icon: mdi:wrench
       collapsed: true
       input:
-        service_counter:
-          name: Service counter (counter)
-          description: Counter helper that tracks the number of dryer cycles.
-          selector:
-            entity:
-              filter:
-                - domain: counter
-
-
-    # ---------- Custom actions ----------
-    custom_actions_section:
-      name: Custom Actions
-      icon: mdi:script-text
-      collapsed: true
-      input:
         maintenance_threshold_cycles:
           name: Maintenance threshold (cycles)
           description: Notify when the counter reaches this number of cycles.
@@ -162,6 +147,21 @@ blueprint:
           selector:
             text:
               multiline: true
+
+
+    # ---------- Custom actions ----------
+    custom_actions_section:
+      name: Custom Actions
+      icon: mdi:script-text
+      collapsed: true
+      input:
+        service_counter:
+          name: Service counter (counter)
+          description: Counter helper that tracks the number of dryer cycles.
+          selector:
+            entity:
+              filter:
+                - domain: counter
         start_custom_actions:
           name: Custom actions on start (Optional)
           description: Extra actions to run when the cycle starts (e.g., TTS/announcements).

@@ -148,10 +148,10 @@ blueprint:
         maintenance_message:
           name: Maintenance notification message
           description: >
-            You can reference {{ states(counter_ent) | int(0) }} for the current counter and {{ maint_threshold }} for the threshold.
+            "You can reference {{ states(counter_ent) | int(0) }} for the current counter and {{ maint_threshold }} for the threshold."
           default: >
-            The dryer has run {{ states(counter_ent) | int(0) }} cycles (threshold {{ maint_threshold }}).
-            Time for routine maintenance.
+            "The dryer has run {{ states(counter_ent) | int(0) }} cycles (threshold {{ maint_threshold }}).
+            Time for routine maintenance."
           selector:
             text: {}
 

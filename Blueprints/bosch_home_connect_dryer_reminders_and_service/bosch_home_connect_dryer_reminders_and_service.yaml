@@ -130,6 +130,14 @@ blueprint:
             entity:
               filter:
                 - domain: counter
+
+
+    # ---------- Custom actions ----------
+    custom_actions_section:
+      name: Custom Actions
+      icon: mdi:script-text
+      collapsed: true
+      input:
         maintenance_threshold_cycles:
           name: Maintenance threshold (cycles)
           description: Notify when the counter reaches this number of cycles.
@@ -154,13 +162,6 @@ blueprint:
           selector:
             text:
               multiline: true
-
-    # ---------- Custom actions ----------
-    custom_actions_section:
-      name: Custom Actions
-      icon: mdi:script-text
-      collapsed: true
-      input:
         start_custom_actions:
           name: Custom actions on start (Optional)
           description: Extra actions to run when the cycle starts (e.g., TTS/announcements).

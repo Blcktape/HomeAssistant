@@ -130,6 +130,7 @@ blueprint:
             entity:
               filter:
                 - domain: counter
+                
         maintenance_threshold_cycles:
           name: Maintenance threshold (cycles)
           description: Notify when the counter reaches this number of cycles.
@@ -140,11 +141,13 @@ blueprint:
               max: 50
               step: 1
               mode: slider
+              
         maintenance_title:
           name: Maintenance notification title
           default: "Dryer maintenance"
           selector:
             text: {}
+            
         maintenance_message:
           name: Maintenance notification message
           description: >

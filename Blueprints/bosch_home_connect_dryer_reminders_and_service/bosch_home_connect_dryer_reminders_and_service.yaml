@@ -3,7 +3,7 @@ blueprint:
   description: >
     # Bosch Home Connect Dryer – Reminders & Service
   
-    **Version:** 2026-05-20.11 - Beta
+    **Version:** 2026-05-20.12 - Beta
 
     
     Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter,
@@ -126,6 +126,7 @@ blueprint:
         service_counter_henk:
           name: Service Counter Henk
           description: HENK
+          default: {}
           selector:
             entity:
               domain: counter

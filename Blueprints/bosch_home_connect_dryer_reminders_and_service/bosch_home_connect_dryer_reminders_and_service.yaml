@@ -152,9 +152,9 @@ blueprint:
           default: >
             The dryer has run {{ states(counter_ent) | int(0) }} cycles (threshold {{ maint_threshold }}).
             Time for routine maintenance.
-            selector:
-              text:
-                multiline: true
+          selector:
+            text:
+              multiline: true
 
     # ---------- Custom actions ----------
     custom_actions_section:

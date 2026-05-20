@@ -121,7 +121,7 @@ blueprint:
     maintenance_notifications_section:
       name: Maintenance Notification
       icon: mdi:play-circle
-      collapsed: false
+      collapsed: true
       input:
         service_counter:
           name: Service counter (counter)

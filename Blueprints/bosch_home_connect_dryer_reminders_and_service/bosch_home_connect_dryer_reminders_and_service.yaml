@@ -127,7 +127,8 @@ blueprint:
           name: Service Counter Henk
           description: HENK
           selector:
-            domain: counter
+            entity:
+              domain: counter
         maintenance_threshold_cycles:
           name: Maintenance threshold (cycles)
           description: Notify when the counter reaches this number of cycles.

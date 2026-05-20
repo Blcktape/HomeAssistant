@@ -3,7 +3,7 @@ blueprint:
   description: >
     # Bosch Home Connect Dryer – Reminders & Service
   
-    **Version:** 2026-05-20.1 - Beta
+    **Version:** 2026-05-20.2 - Beta
 
     
     Sends end-of-cycle notifications for a Bosch/Home Connect dryer, tracks cycles in a Counter,
@@ -147,11 +147,8 @@ blueprint:
             text: {}
         maintenance_message:
           name: Maintenance notification message
-          description: >
-            You can reference {{ states(counter_ent) | int(0) }} for the current counter and {{ maint_threshold }} for the threshold.
-          default: >
-            The dryer has run {{ states(counter_ent) | int(0) }} cycles (threshold {{ maint_threshold }}).\n
-            Time for routine maintenance.
+          description: You can reference {{ states(counter_ent) | int(0) }} for the current counter and {{ maint_threshold }} for the threshold.
+          default: The dryer has run {{ states(counter_ent) | int(0) }} cycles (threshold {{ maint_threshold }}).\nTime for routine maintenance.
           selector:
             text:
               multiline: true

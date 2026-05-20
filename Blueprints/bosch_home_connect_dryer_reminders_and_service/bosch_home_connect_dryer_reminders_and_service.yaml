@@ -150,7 +150,7 @@ blueprint:
           description: >
             You can reference {{ states(counter_ent) | int(0) }} for the current counter and {{ maint_threshold }} for the threshold.
           default: >
-            The dryer has run {{ states(counter_ent) | int(0) }} cycles (threshold {{ maint_threshold }}).
+            The dryer has run {{ states(counter_ent) | int(0) }} cycles (threshold {{ maint_threshold }}).\n
             Time for routine maintenance.
           selector:
             text:

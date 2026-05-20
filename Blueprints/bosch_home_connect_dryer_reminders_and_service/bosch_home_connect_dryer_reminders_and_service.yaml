@@ -142,7 +142,7 @@ blueprint:
               mode: slider
         maintenance_title:
           name: Maintenance notification title
-          default: "Dryer maintenance"
+          default: Dryer maintenance
           selector:
             text: {}
         maintenance_message:
